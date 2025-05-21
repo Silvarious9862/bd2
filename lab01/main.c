@@ -3,7 +3,7 @@
 #include <libpq-fe.h>
 
 int main() {
-    PGconn *conn = PQconnectdb("dbname=cargo user=postgres password=12345");
+    PGconn *conn = PQconnectdb("dbname=cargo user=vscode_user password=12345");
 
     if (PQstatus(conn) == CONNECTION_BAD) {
         fprintf(stderr, "Ошибка подключения: %s\n", PQerrorMessage(conn));
