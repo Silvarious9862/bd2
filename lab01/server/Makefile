@@ -7,16 +7,16 @@ INC_DIR := ./include
 OUT_DIR := ./out/$(BUILD)
 
 # Имя бинарного файла для нашего приложения
-TARGET := $(OUT_DIR)/hello_world
+TARGET := $(OUT_DIR)/server
 
-# Исходные файлы (пока только один)
-SRCS := $(SRC_DIR)/hello_world.c
+# Исходные файлы – включаем все .c файлы в каталоге src
+SRCS := $(wildcard $(SRC_DIR)/*.c)
 
 # Компилятор
 CC := gcc
 
-# Общие CFLAGS
-COMMON_CFLAGS := -Wall -Wextra -std=c11 -pedantic -I$(INC_DIR) -lcjson
+# Общие флаги компиляции (флаги для подключения заголовочных файлов)
+COMMON_CFLAGS := -Wall -Wextra -std=c11 -pedantic -I$(INC_DIR)
 
 ifeq ($(BUILD), debug)
 	CFLAGS := $(COMMON_CFLAGS) -g -O0 -fsanitize=address -fno-omit-frame-pointer -DDEBUG
@@ -26,13 +26,16 @@ else
 	$(error Unknown build type: $(BUILD))
 endif
 
+# Флаги линковки – подключаем PostgreSQL, cJSON и pthread
+LDLIBS := -lpq -ljansson -lpthread
+
 .PHONY: all clean debug release
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
 	@mkdir -p $(OUT_DIR)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) -lpq
+	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LDLIBS)
 
 debug:
 	$(MAKE) BUILD=debug all
