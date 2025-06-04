@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QTableWidgetItem>
 #include <QDebug>
+#include <QFile>
 
 #define SERVER_IP "192.168.12.121"
 #define SERVER_PORT 8080
@@ -59,12 +60,39 @@ void MainWindow::requestEmployeeTable()
     }
 
     QByteArray responseData = socket.readAll();
-    QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
-    if (responseDoc.isNull()) {
-        QMessageBox::warning(this, "Ошибка", "Ошибка парсинга ответа.");
+    QFile file("response.json");
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Не удалось открыть файл для записи";
+    } else {
+        file.write(responseData);  // Записываем данные как есть
+        file.close();
+        qDebug() << "JSON-ответ успешно сохранен в файл response.json";
+    }
+    // Разбираем ответ сервера
+    QString responseString(responseData);
+
+    // Удаляем заголовки HTTP — находим первую '{'
+    int jsonStart = responseString.indexOf('{');
+    if (jsonStart == -1) {
+        QMessageBox::warning(this, "Ошибка", "Ответ сервера не содержит JSON.");
         return;
     }
+
+    // Получаем только JSON-часть
+    QString jsonBody = responseString.mid(jsonStart);
+    QByteArray cleanJson = jsonBody.toUtf8();
+
+    // Парсим JSON-ответ
+    QJsonParseError parseError;
+    QJsonDocument responseDoc = QJsonDocument::fromJson(cleanJson, &parseError);
+    if (responseDoc.isNull()) {
+        QMessageBox::warning(this, "Ошибка", "Ошибка парсинга JSON: " + parseError.errorString());
+        return;
+    }
+
+    // Теперь `responseDoc` содержит правильный JSON
     QJsonObject responseObj = responseDoc.object();
+
     if (responseObj.value("status").toString() != "ok") {
         QMessageBox::warning(this, "Ошибка", "Сервер вернул ошибку: " + responseObj.value("message").toString());
         return;
