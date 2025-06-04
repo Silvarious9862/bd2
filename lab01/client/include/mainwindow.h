@@ -3,21 +3,23 @@
 
 #include <QMainWindow>
 
-QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
-QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private:
+    /// Запрашивает данные таблицы employee с сервера и заполняет QTableWidget
+    void requestEmployeeTable();
+
     Ui::MainWindow *ui;
 };
+
 #endif // MAINWINDOW_H

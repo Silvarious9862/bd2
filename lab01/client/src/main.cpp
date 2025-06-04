@@ -1,12 +1,12 @@
 #include <QApplication>
-#include <QMessageBox>
+#include "mainwindow.h"
 
-int main(int argc, char *argv[]) {
-    QApplication app(argc, argv); // Инициализация Qt-приложения
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
 
-    QMessageBox msgBox;
-    msgBox.setText("Hello, World!");
-    msgBox.exec(); // Показываем всплывающее окно
+    MainWindow w;
+    w.show();
 
     return app.exec();
 }

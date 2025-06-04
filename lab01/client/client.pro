@@ -1,21 +1,22 @@
-QT += core gui widgets
+QT += core gui widgets network
 
-CONFIG += c++17
+CONFIG += c++11
 
-INCLUDEPATH += include   # Добавляем путь к заголовочным файлам
+TARGET = Client
+TEMPLATE = app
 
-SOURCES += src/main.cpp src/mainwindow.cpp
-HEADERS += include/mainwindow.h  # Указываем заголовочный файл явно
+# Пути к заголовочным файлам
+INCLUDEPATH += include
 
+# Исходные файлы проекта
+SOURCES += \
+    src/main.cpp \
+    src/mainwindow.cpp
+
+# Заголовочные файлы
+HEADERS += \
+    include/mainwindow.h
+
+# UI-файлы (если они находятся в папке src, иначе поправьте путь)
 FORMS += \
-    mainwindow.ui
-
-TRANSLATIONS += \
-    client_ru_RU.ts
-CONFIG += lrelease
-CONFIG += embed_translations
-
-# Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target
+    src/mainwindow.ui
