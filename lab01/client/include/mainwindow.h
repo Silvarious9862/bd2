@@ -2,12 +2,13 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QMap>
 
 namespace Ui {
 class MainWindow;
 }
 
-class NetworkClient;  // Предварительное объявление класса для разделения слоев
+class NetworkClient;  // Предварительное объявление
 
 class MainWindow : public QMainWindow
 {
@@ -21,8 +22,14 @@ private:
     /// Запрашивает данные таблицы employee и заполняет QTableWidget
     void requestEmployeeTable();
 
+    /// Выполняет запрос к серверу для получения lookup-таблицы для перевозчиков
+    void populateCarrierLookup();
+
     Ui::MainWindow *ui;
-    NetworkClient *networkClient; // Объект для работы с сервером
+    NetworkClient *networkClient;
+
+    // Локальная lookup таблица <carrier_id, carrier_name>
+    QMap<QString, QString> m_carrierLookup;
 };
 
 #endif // MAINWINDOW_H
