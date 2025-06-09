@@ -41,3 +41,42 @@ char* get_tables_list() {
 
     return json_str;  // Вызывающий должен вызвать free() для json_str
 }
+
+char* get_lookup_table(const char* table) {
+    const char *conninfo = "host=localhost port=5432 dbname=cargo user=postgres password=12345";
+    PGconn *conn = PQconnectdb(conninfo);
+    if (PQstatus(conn) != CONNECTION_OK) {
+        fprintf(stderr, "Ошибка подключения к базе: %s\n", PQerrorMessage(conn));
+        PQfinish(conn);
+        return NULL;
+    }
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT id, company_name FROM \"%s\" ORDER BY id;", table);
+
+    PGresult *res = PQexec(conn, query);
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        fprintf(stderr, "Ошибка выполнения запроса: %s\n", PQerrorMessage(conn));
+        PQclear(res);
+        PQfinish(conn);
+        return NULL;
+    }
+
+    json_t *json_arr = json_array();
+    int num_rows = PQntuples(res);
+
+    for (int i = 0; i < num_rows; i++) {
+        json_t *json_obj = json_object();
+        json_object_set_new(json_obj, "carrier_id", json_string(PQgetvalue(res, i, 0)));
+        json_object_set_new(json_obj, "carrier_name", json_string(PQgetvalue(res, i, 1)));
+        json_array_append_new(json_arr, json_obj);
+    }
+
+    char *json_str = json_dumps(json_arr, JSON_COMPACT);
+    json_decref(json_arr);
+    PQclear(res);
+    PQfinish(conn);
+
+    return json_str;
+}

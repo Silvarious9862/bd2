@@ -115,7 +115,51 @@ void process_request(int client_fd, const char* request_json) {
                 free(rows_json);
             }
         }
-        else {
+        else if (strcmp(action, "get_lookup") == 0) {
+    json_t *table_item = json_object_get(json_request, "table");
+    if (!json_is_string(table_item)) {
+        json_t *error_obj = json_object();
+        json_object_set_new(error_obj, "status", json_string("error"));
+        json_object_set_new(error_obj, "message", json_string("Некорректный параметр 'table'"));
+        char *error_str = json_dumps(error_obj, JSON_COMPACT);
+        send_response(client_fd, error_str);
+        free(error_str);
+        json_decref(error_obj);
+        json_decref(json_request);
+        return;
+    }
+
+    const char *table = json_string_value(table_item);
+    char *lookup_json = get_lookup_table(table);
+    if (!lookup_json) {
+        json_t *error_obj = json_object();
+        json_object_set_new(error_obj, "status", json_string("error"));
+        json_object_set_new(error_obj, "message", json_string("Ошибка получения данных"));
+        char *error_str = json_dumps(error_obj, JSON_COMPACT);
+        send_response(client_fd, error_str);
+        free(error_str);
+        json_decref(error_obj);
+    } else {
+        json_t *response_obj = json_object();
+        json_object_set_new(response_obj, "status", json_string("ok"));
+        
+        json_error_t dummy_error;
+        json_t *data_array = json_loads(lookup_json, 0, &dummy_error);
+        if (data_array)
+            json_object_set_new(response_obj, "data", data_array);
+        else
+            json_object_set_new(response_obj, "data", json_null());
+        
+        char *response_str = json_dumps(response_obj, JSON_COMPACT);
+        send_response(client_fd, response_str);
+        
+        free(response_str);
+        json_decref(response_obj);
+        free(lookup_json);
+    }
+}
+
+	else {
             json_t *error_obj = json_object();
             json_object_set_new(error_obj, "status", json_string("error"));
             json_object_set_new(error_obj, "message", json_string("Неизвестное действие"));

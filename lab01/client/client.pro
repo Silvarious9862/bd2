@@ -10,15 +10,23 @@ INCLUDEPATH += include
 
 # Исходные файлы проекта
 SOURCES += \
+    src/ModeSelectionDialog.cpp \
+    src/RecordEditDialog.cpp \
     src/main.cpp \
     src/mainwindow.cpp \
     src/networkclient.cpp
 
 # Заголовочные файлы
 HEADERS += \
+    include/ModeSelectionDialog.h \
+    include/RecordEditDialog.h \
+    include/formmode.h \
     include/mainwindow.h \
-    include/networkclient.h
+    include/networkclient.h \
+    include/record.h
 
-# UI-файлы (если они находятся в папке src, иначе поправьте путь)
+# UI-файлы
 FORMS += \
+    ModeSelectionDialog.ui \
+    src/RecordEditDialog.ui \
     src/mainwindow.ui

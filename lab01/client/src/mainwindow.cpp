@@ -7,30 +7,91 @@
 #include <QJsonArray>
 #include <QMessageBox>
 #include <QDebug>
+#include "RecordEditDialog.h"
 
-#define SERVER_IP "192.168.100.10"
+#define SERVER_IP "192.168.137.2"
 #define SERVER_PORT 8080
 
-MainWindow::MainWindow(QWidget *parent) :
+// Обновлённый конструктор с параметром режима работы
+MainWindow::MainWindow(FormMode mode, QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    m_mode(mode)
 {
     ui->setupUi(this);
+
+    // Формируем заголовок окна в зависимости от режима
+    QString title = "employee - ";
+    if (m_mode == ViewEdit)
+        title += "Просмотр с редактированием";
+    else if (m_mode == ViewReadOnly)
+        title += "Просмотр без редактирования";
+    else if (m_mode == Selection)
+        title += "Выбор записи";
+    setWindowTitle(title);
 
     // Создаем экземпляр NetworkClient
     networkClient = new NetworkClient(this);
 
-    // Сначала заполним lookup таблицу перевозчиков
+    // Сначала заполним lookup-таблицу перевозчиков
     populateCarrierLookup();
 
-    // После этого можно делать запрос данных для основной таблицы
+    // После этого запрашиваем данные таблицы employee и заполняем таблицу
     requestEmployeeTable();
-    ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    // Настраиваем таблицу в зависимости от режима работы
+    if (m_mode == ViewEdit) {
+        ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        ui->listTable->setSelectionMode(QAbstractItemView::SingleSelection);
+        ui->listTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    } else if (m_mode == ViewReadOnly) {
+        ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        ui->listTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    } else if (m_mode == Selection) {
+        ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        ui->listTable->setSelectionMode(QAbstractItemView::SingleSelection);
+        ui->listTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    }
+    updateButtonStates();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::updateButtonStates()
+{
+    switch(m_mode) {
+    case ViewEdit:
+        // В режиме редактирования все кнопки доступны. По умолчанию кнопку "Применить" можно сделать неактивной,
+        // если изменений ещё нет.
+        ui->btnView->setEnabled(true);
+        ui->btnEdit->setEnabled(true);
+        ui->btnAdd->setEnabled(true);
+        ui->btnDelete->setEnabled(true);
+        ui->btnExit->setEnabled(true);
+        ui->btnApply->setEnabled(false);
+        break;
+    case ViewReadOnly:
+        // В режиме просмотра доступны только кнопка Выход.
+        ui->btnView->setEnabled(false);
+        ui->btnEdit->setEnabled(false);
+        ui->btnAdd->setEnabled(false);
+        ui->btnDelete->setEnabled(false);
+        ui->btnExit->setEnabled(true);
+        ui->btnApply->setEnabled(false);
+        break;
+    case Selection:
+        // В режиме выбора записи доступны Просмотр и Выход.
+        ui->btnView->setEnabled(true);
+        ui->btnEdit->setEnabled(false);
+        ui->btnAdd->setEnabled(false);
+        ui->btnDelete->setEnabled(false);
+        ui->btnExit->setEnabled(true);
+        ui->btnApply->setEnabled(false);
+        break;
+    }
 }
 
 void MainWindow::populateCarrierLookup()
@@ -50,20 +111,11 @@ void MainWindow::populateCarrierLookup()
         return;
     }
 
-    // Ожидается, что сервер вернёт JSON-объект, содержащий массив данных в поле "data"
-    // Каждая запись должна быть объектом с полями "carrier_id" и "carrier_name"
+    // Ожидается, что сервер вернёт JSON с массивом данных в поле "data"
+    // Каждая запись должна содержать поля "carrier_id" и "carrier_name"
     QJsonArray dataArray = responseObj.value("data").toArray();
     m_carrierLookup.clear();
 
-    // Например, сервер может вернуть данные так:
-    // {
-    //    "status": "ok",
-    //    "data": [
-    //         { "carrier_id": "13", "carrier_name": "Carrier A" },
-    //         { "carrier_id": "14", "carrier_name": "Carrier B" },
-    //         ...
-    //    ]
-    // }
     for (const QJsonValue &value : dataArray) {
         QJsonObject rowObj = value.toObject();
         QString id = rowObj.value("carrier_id").toString();
@@ -98,7 +150,6 @@ void MainWindow::requestEmployeeTable()
     }
 
     QJsonArray dataArray = responseObj.value("data").toArray();
-
     ui->listTable->clear();
 
     if (dataArray.isEmpty()) {
@@ -108,7 +159,7 @@ void MainWindow::requestEmployeeTable()
         return;
     }
 
-    // Жестко задаем порядок столбцов
+    // Жестко задаем порядок столбцов (без колонки "id")
     QStringList headers;
     headers << "badge" << "lastname" << "firstname" << "experience" << "carrier_id";
 
@@ -122,7 +173,7 @@ void MainWindow::requestEmployeeTable()
         for (int col = 0; col < headers.size(); ++col) {
             QString key = headers.at(col);
             QString cellText;
-            // Если это поле carrier_id, подменяем значение описанием из lookup таблицы
+            // При заполнении проверяем, если это поле carrier_id, подменяем его значением из lookup-таблицы
             if (key == "carrier_id") {
                 QString rawCarrierId = rowObj.value(key).toString();
                 cellText = m_carrierLookup.contains(rawCarrierId) ? m_carrierLookup.value(rawCarrierId) : rawCarrierId;
@@ -134,3 +185,47 @@ void MainWindow::requestEmployeeTable()
         ++row;
     }
 }
+
+void MainWindow::on_btnBack_clicked()
+{
+    // При нажатии на кнопку Back посылаем сигнал и закрываем окно
+    emit backRequested();
+    close();
+}
+
+
+void MainWindow::on_btnEdit_clicked()
+{
+    int row = ui->listTable->currentRow();
+    if (row < 0) {
+        QMessageBox::information(this, "Редактирование", "Пожалуйста, выберите запись для редактирования.");
+        return;
+    }
+
+    // Извлекаем текущую запись. Предполагается, что таблица имеет колонки в следующем порядке:
+    // 0: Badge, 1: Last Name, 2: First Name, 3: Experience, 4: Carrier ID
+    Record record;
+    record.badge     = ui->listTable->item(row, 0)->text();
+    record.lastName  = ui->listTable->item(row, 1)->text();
+    record.firstName = ui->listTable->item(row, 2)->text();
+    record.experience= ui->listTable->item(row, 3)->text();
+    record.carrierId = ui->listTable->item(row, 4)->text();
+
+    // Открываем диалог редактирования
+    RecordEditDialog dlg(record, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        Record newRecord = dlg.getEditedRecord();
+        // Обновляем строку в таблице
+        ui->listTable->item(row, 0)->setText(newRecord.badge);
+        ui->listTable->item(row, 1)->setText(newRecord.lastName);
+        ui->listTable->item(row, 2)->setText(newRecord.firstName);
+        ui->listTable->item(row, 3)->setText(newRecord.experience);
+        ui->listTable->item(row, 4)->setText(newRecord.carrierId);
+
+        // Сохраняем локально изменения (например, в какой-нибудь коллекции)
+        // Если ранее у вас кнопка "Применить" была неактивна, активируйте её:
+        ui->btnApply->setEnabled(true);
+        // Также можно сохранить изменения в контейнер m_modifiedRecords, как обсуждалось ранее.
+    }
+}
+
