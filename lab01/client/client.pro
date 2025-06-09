@@ -12,6 +12,7 @@ INCLUDEPATH += include
 SOURCES += \
     src/ModeSelectionDialog.cpp \
     src/RecordEditDialog.cpp \
+    src/RecordViewDialog.cpp \
     src/main.cpp \
     src/mainwindow.cpp \
     src/networkclient.cpp
@@ -20,6 +21,7 @@ SOURCES += \
 HEADERS += \
     include/ModeSelectionDialog.h \
     include/RecordEditDialog.h \
+    include/RecordViewDialog.h \
     include/formmode.h \
     include/mainwindow.h \
     include/networkclient.h \
@@ -29,4 +31,5 @@ HEADERS += \
 FORMS += \
     ModeSelectionDialog.ui \
     src/RecordEditDialog.ui \
+    src/RecordViewDialog.ui \
     src/mainwindow.ui

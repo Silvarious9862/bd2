@@ -35,6 +35,14 @@ private slots:
 
     void on_btnEdit_clicked();
 
+    void on_btnView_clicked();
+
+    void on_btnExit_clicked();
+
+    void on_btnAdd_clicked();
+
+    void on_btnDelete_clicked();
+
 private:
     /// Запрашивает данные таблицы employee и заполняет QTableWidget
     void requestEmployeeTable();

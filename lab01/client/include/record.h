@@ -10,14 +10,16 @@ struct Record {
     QString firstName;
     QString experience;
     QString carrierId;
+    QString carrierName;
 
     bool operator!=(const Record &other) const {
-        return  id         != other.id ||
-                badge      != other.badge ||
-                lastName   != other.lastName ||
-                firstName  != other.firstName ||
-                experience != other.experience ||
-                carrierId  != other.carrierId;
+        return  id          != other.id ||
+                badge       != other.badge ||
+                lastName    != other.lastName ||
+                firstName   != other.firstName ||
+                experience  != other.experience ||
+                carrierId   != other.carrierId ||
+                carrierName != other.carrierName;
     }
 };
 

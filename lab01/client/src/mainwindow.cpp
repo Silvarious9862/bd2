@@ -8,8 +8,9 @@
 #include <QMessageBox>
 #include <QDebug>
 #include "RecordEditDialog.h"
+#include "RecordViewDialog.h"
 
-#define SERVER_IP "192.168.137.2"
+#define SERVER_IP "localhost"
 #define SERVER_PORT 8080
 
 // Обновлённый конструктор с параметром режима работы
@@ -38,7 +39,6 @@ MainWindow::MainWindow(FormMode mode, QWidget *parent) :
 
     // После этого запрашиваем данные таблицы employee и заполняем таблицу
     requestEmployeeTable();
-
     // Настраиваем таблицу в зависимости от режима работы
     if (m_mode == ViewEdit) {
         ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -52,6 +52,13 @@ MainWindow::MainWindow(FormMode mode, QWidget *parent) :
         ui->listTable->setSelectionMode(QAbstractItemView::SingleSelection);
         ui->listTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     }
+    // Устанавливаем для всех столбцов, кроме последнего, режим подгонки под содержимое,
+    // а для последнего столбца режим растягивания.
+    for (int i = 0; i < ui->listTable->columnCount() - 1; ++i) {
+        ui->listTable->horizontalHeader()->setSectionResizeMode(i, QHeaderView::ResizeToContents);
+    }
+    ui->listTable->horizontalHeader()->setSectionResizeMode(ui->listTable->columnCount() - 1, QHeaderView::Stretch);
+
     updateButtonStates();
 }
 
@@ -176,11 +183,16 @@ void MainWindow::requestEmployeeTable()
             // При заполнении проверяем, если это поле carrier_id, подменяем его значением из lookup-таблицы
             if (key == "carrier_id") {
                 QString rawCarrierId = rowObj.value(key).toString();
-                cellText = m_carrierLookup.contains(rawCarrierId) ? m_carrierLookup.value(rawCarrierId) : rawCarrierId;
+                // Получаем отображаемое имя из lookup‑таблицы
+                QString displayText = m_carrierLookup.contains(rawCarrierId) ? m_carrierLookup.value(rawCarrierId) : rawCarrierId;
+                QTableWidgetItem *item = new QTableWidgetItem(displayText);
+                // Сохраняем настоящий id в пользовательских данных ячейки
+                item->setData(Qt::UserRole, rawCarrierId);
+                ui->listTable->setItem(row, col, item);
             } else {
-                cellText = rowObj.contains(key) ? rowObj.value(key).toString() : "";
+                QString cellText = rowObj.contains(key) ? rowObj.value(key).toString() : "";
+                ui->listTable->setItem(row, col, new QTableWidgetItem(cellText));
             }
-            ui->listTable->setItem(row, col, new QTableWidgetItem(cellText));
         }
         ++row;
     }
@@ -202,30 +214,151 @@ void MainWindow::on_btnEdit_clicked()
         return;
     }
 
-    // Извлекаем текущую запись. Предполагается, что таблица имеет колонки в следующем порядке:
-    // 0: Badge, 1: Last Name, 2: First Name, 3: Experience, 4: Carrier ID
     Record record;
     record.badge     = ui->listTable->item(row, 0)->text();
     record.lastName  = ui->listTable->item(row, 1)->text();
     record.firstName = ui->listTable->item(row, 2)->text();
     record.experience= ui->listTable->item(row, 3)->text();
-    record.carrierId = ui->listTable->item(row, 4)->text();
+    record.carrierName = ui->listTable->item(row, 4)->text();
+    record.carrierId = ui->listTable->item(row, 4)->data(Qt::UserRole).toString();
 
-    // Открываем диалог редактирования
-    RecordEditDialog dlg(record, this);
+    RecordEditDialog dlg(record, m_carrierLookup, this);
     if (dlg.exec() == QDialog::Accepted) {
+        // При обновлении строки в таблице:
         Record newRecord = dlg.getEditedRecord();
-        // Обновляем строку в таблице
+
         ui->listTable->item(row, 0)->setText(newRecord.badge);
         ui->listTable->item(row, 1)->setText(newRecord.lastName);
         ui->listTable->item(row, 2)->setText(newRecord.firstName);
         ui->listTable->item(row, 3)->setText(newRecord.experience);
-        ui->listTable->item(row, 4)->setText(newRecord.carrierId);
+        // Отображаем только название перевозчика
+        ui->listTable->item(row, 4)->setText(newRecord.carrierName);
 
-        // Сохраняем локально изменения (например, в какой-нибудь коллекции)
-        // Если ранее у вас кнопка "Применить" была неактивна, активируйте её:
+        // Включаем кнопку Применить, если были изменения:
         ui->btnApply->setEnabled(true);
-        // Также можно сохранить изменения в контейнер m_modifiedRecords, как обсуждалось ранее.
+
+
+        ui->btnApply->setEnabled(true);
+    }
+}
+
+
+void MainWindow::on_btnView_clicked()
+{
+    int row = ui->listTable->currentRow();
+    if (row < 0) {
+        QMessageBox::information(this, "Просмотр",
+                                 "Пожалуйста, выберите запись для просмотра.");
+        return;
+    }
+
+    // Формируем объект Record
+    Record record;
+    record.badge      = ui->listTable->item(row, 0)->text();
+    record.lastName   = ui->listTable->item(row, 1)->text();
+    record.firstName  = ui->listTable->item(row, 2)->text();
+    record.experience = ui->listTable->item(row, 3)->text();
+    record.carrierName= ui->listTable->item(row, 4)->text();
+    record.carrierId  = ui->listTable->item(row, 4)->data(Qt::UserRole).toString();
+
+    // Создаем и запускаем диалог просмотра
+    RecordViewDialog dlg(record, m_carrierLookup, this);
+    dlg.exec();
+}
+
+
+void MainWindow::on_btnExit_clicked()
+{
+    QApplication::exit();
+}
+
+
+void MainWindow::on_btnAdd_clicked()
+{
+    // Создаем пустую запись
+    Record record;
+    record.id = 0; // временно, новый id вычислим ниже
+    record.badge = "";
+    record.lastName = "";
+    record.firstName = "";
+    record.experience = "";
+    record.carrierId = "";
+    record.carrierName = "";
+
+    // Открываем диалог редактирования (с пустыми полями)
+    RecordEditDialog dlg(record, m_carrierLookup, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        Record newRecord = dlg.getEditedRecord();
+        // Проверяем, что все необходимые поля заполнены
+        if (newRecord.badge.isEmpty() ||
+            newRecord.lastName.isEmpty() ||
+            newRecord.firstName.isEmpty() ||
+            newRecord.experience.isEmpty() ||
+            newRecord.carrierId.isEmpty())
+        {
+            QMessageBox::warning(this, "Ошибка", "Все поля должны быть заполнены.");
+            return;
+        }
+
+        // Находим максимальное значение id в таблице (предполагаем, что id хранится в userData первого столбца)
+        int maxId = 0;
+        for (int i = 0; i < ui->listTable->rowCount(); ++i) {
+            int curId = ui->listTable->item(i, 0)->data(Qt::UserRole).toInt();
+            if (curId > maxId)
+                maxId = curId;
+        }
+        // Выполняем явное преобразование: новый id – символ, равный maxId+1
+        newRecord.id = QChar(maxId + 1);
+
+        // Добавляем новую строку в конец таблицы
+        int row = ui->listTable->rowCount();
+        ui->listTable->insertRow(row);
+
+        QTableWidgetItem *itemBadge = new QTableWidgetItem(newRecord.badge);
+        itemBadge->setData(Qt::UserRole, newRecord.id); // сохраняем id в userData
+
+        QTableWidgetItem *itemLastName  = new QTableWidgetItem(newRecord.lastName);
+        QTableWidgetItem *itemFirstName = new QTableWidgetItem(newRecord.firstName);
+        QTableWidgetItem *itemExperience= new QTableWidgetItem(newRecord.experience);
+
+        QString displayCarrier = m_carrierLookup.contains(newRecord.carrierId) ?
+                                     m_carrierLookup.value(newRecord.carrierId) :
+                                     newRecord.carrierId;
+        QTableWidgetItem *itemCarrier = new QTableWidgetItem(displayCarrier);
+        itemCarrier->setData(Qt::UserRole, newRecord.carrierId);
+
+        ui->listTable->setItem(row, 0, itemBadge);
+        ui->listTable->setItem(row, 1, itemLastName);
+        ui->listTable->setItem(row, 2, itemFirstName);
+        ui->listTable->setItem(row, 3, itemExperience);
+        ui->listTable->setItem(row, 4, itemCarrier);
+
+        ui->btnApply->setEnabled(true);
+
+        // Выбираем добавленную строку
+        ui->listTable->selectRow(row);
+        // Прокручиваем таблицу до только что добавленной записи
+        ui->listTable->scrollToItem(ui->listTable->item(row, 0), QAbstractItemView::PositionAtBottom);
+    }
+}
+
+void MainWindow::on_btnDelete_clicked()
+{
+    int row = ui->listTable->currentRow();
+    if (row < 0) {
+        QMessageBox::information(this, "Удаление", "Пожалуйста, выберите запись для удаления.");
+        return;
+    }
+
+    QMessageBox::StandardButton reply = QMessageBox::question(this,
+                                                              "Подтверждение удаления",
+                                                              "Вы уверены, что хотите удалить запись?",
+                                                              QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        ui->listTable->removeRow(row);
+        // Если предполагается, то включаем кнопку "Применить", чтобы пользователь мог синхронизировать изменения.
+        ui->btnApply->setEnabled(true);
     }
 }
 
