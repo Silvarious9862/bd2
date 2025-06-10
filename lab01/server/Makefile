@@ -16,7 +16,7 @@ SRCS := $(wildcard $(SRC_DIR)/*.c)
 CC := gcc
 
 # Общие флаги компиляции (флаги для подключения заголовочных файлов)
-COMMON_CFLAGS := -Wall -Wextra -std=c11 -pedantic -I$(INC_DIR)
+COMMON_CFLAGS := -Wall -Wextra -std=c11 -pedantic -I$(INC_DIR) 
 
 ifeq ($(BUILD), debug)
 	CFLAGS := $(COMMON_CFLAGS) -g -O0 -fsanitize=address -fno-omit-frame-pointer -DDEBUG
