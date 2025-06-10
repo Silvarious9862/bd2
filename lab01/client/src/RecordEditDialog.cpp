@@ -103,6 +103,8 @@ void RecordEditDialog::accept()
 Record RecordEditDialog::getEditedRecord() const
 {
     Record r;
+    // Сохраняем исходный id из переданного в конструкторе record
+    r.id = m_record.id;  // ← добавляем, чтобы id не потерялся
     // Считываем значения из редактируемых ячеек
     if (ui->tableWidget->item(0, 1))
         r.badge = ui->tableWidget->item(0, 1)->text();
@@ -113,7 +115,7 @@ Record RecordEditDialog::getEditedRecord() const
     if (ui->tableWidget->item(3, 1))
         r.experience = ui->tableWidget->item(3, 1)->text();
 
-    // Для перевозчика предполагается, что у нас используется QComboBox
+    // Для перевозчика используем QComboBox
     QComboBox *combo = qobject_cast<QComboBox*>(ui->tableWidget->cellWidget(4, 1));
     if (combo) {
         r.carrierId = combo->currentData().toString();
@@ -121,6 +123,7 @@ Record RecordEditDialog::getEditedRecord() const
     }
     return r;
 }
+
 
 RecordEditDialog::~RecordEditDialog()
 {

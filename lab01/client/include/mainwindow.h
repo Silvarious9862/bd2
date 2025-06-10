@@ -3,6 +3,10 @@
 
 #include <QMainWindow>
 #include <QMap>
+#include <QList>
+#include <QLabel>
+#include <QMovie>
+#include "record.h"
 
 namespace Ui {
 class MainWindow;
@@ -43,7 +47,13 @@ private slots:
 
     void on_btnDelete_clicked();
 
+    void on_btnApply_clicked();
+
 private:
+    //DEBUG
+    void debugWriteChangeLists();
+    void showErrorDialog(const QString &title, const QString &shortMessage, const QString &detailedMessage);
+
     /// Запрашивает данные таблицы employee и заполняет QTableWidget
     void requestEmployeeTable();
 
@@ -53,11 +63,23 @@ private:
     ///метод для установки состояний кнопок в зависимости от режима
     void updateButtonStates();
 
+    void showLoadingSpinner();
+    void hideLoadingSpinner();
+
     Ui::MainWindow *ui;
     NetworkClient *networkClient;
 
     // Локальная lookup таблица <carrier_id, carrier_name>
     QMap<QString, QString> m_carrierLookup;
+
+    // Списки изменений в таблице
+    QList<Record> m_editedRecords;
+    QList<Record> m_addedRecords;
+    QList<int>    m_deletedRecordIDs;
+
+    // Спиннер загрузки
+    QLabel *loadingLabel = nullptr;
+    QMovie *loadingAnimation = nullptr;
 
     // Режим работы окна
     FormMode m_mode;
