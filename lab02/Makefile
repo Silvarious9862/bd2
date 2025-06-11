@@ -1,47 +1,53 @@
-# Значение переменной BUILD можно задать извне (по умолчанию debug)
-BUILD ?= debug
-
+# Makefile для проекта переноса данных
 # Каталоги
-SRC_DIR := ./src
-INC_DIR := ./include
-OUT_DIR := ./out/$(BUILD)
-
-# Имя бинарного файла для нашего приложения
-TARGET := $(OUT_DIR)/server
-
-# Исходные файлы – включаем все .c файлы в каталоге src
-SRCS := $(wildcard $(SRC_DIR)/*.c)
+SRC_DIR	:= src
+INCLUDE_DIR:= include
+BUILD_DIR  := build
+OUT_DIR	:= out
 
 # Компилятор
 CC := gcc
 
-# Общие флаги компиляции (флаги для подключения заголовочных файлов)
-COMMON_CFLAGS := -Wall -Wextra -std=c11 -pedantic -I$(INC_DIR) 
+# Режим сборки: debug или release (по умолчанию debug)
+MODE ?= debug
 
-ifeq ($(BUILD), debug)
-    CFLAGS := $(COMMON_CFLAGS) -g -O0 -fsanitize=address -fno-omit-frame-pointer -DDEBUG
-else ifeq ($(BUILD), release)
-    CFLAGS := $(COMMON_CFLAGS) -O2 -DNDEBUG
+ifeq ($(MODE), debug)
+	CFLAGS := -Wall -Wextra -I$(INCLUDE_DIR) -g
 else
-    $(error Unknown build type: $(BUILD))
+	CFLAGS := -Wall -Wextra -I$(INCLUDE_DIR) -O2
 endif
 
-# Флаги линковки – подключаем PostgreSQL, BerkeleyDB, jansson и pthread
-LDLIBS := -lpq -ldb -ljansson -lpthread
+# Флаги для линковки
+LFLAGS := -lpq -ldb
 
-.PHONY: all clean debug release
+# Поиск исходных файлов
+SRC_FILES := $(wildcard $(SRC_DIR)/*.c)
+# Соответствующие объектные файлы помещаются в BUILD_DIR
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES))
+
+# Название итогового бинарного файла
+TARGET := $(OUT_DIR)/transfer
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS)
-    @mkdir -p $(OUT_DIR)
-    $(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LDLIBS)
+$(TARGET): $(OBJ_FILES)
+	@mkdir -p $(OUT_DIR)
+	$(CC) $(CFLAGS) -o $@ $(OBJ_FILES) $(LFLAGS)
+	@echo "Сборка завершена, файл: $@"
 
-debug:
-    $(MAKE) BUILD=debug all
-
-release:
-    $(MAKE) BUILD=release all
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-    rm -rf ./out
+	rm -rf $(BUILD_DIR) $(OUT_DIR)
+	@echo "Очищено: $(BUILD_DIR) и $(OUT_DIR)"
+
+# Цели для отдельных сборок
+debug:
+	$(MAKE) MODE=debug
+
+release:
+	$(MAKE) MODE=release
+
+.PHONY: all clean debug release
