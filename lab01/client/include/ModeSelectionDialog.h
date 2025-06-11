@@ -17,6 +17,9 @@ public:
 
     // Метод, возвращающий выбранный режим
     FormMode selectedMode() const;
+    QString selectedDbType() const;
+    void setInitialDbType(const QString &dbType);
+
 
 private:
     Ui::ModeSelectionDialog *ui;

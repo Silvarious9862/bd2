@@ -27,12 +27,13 @@ public:
     };
 
     // Обновлённый конструктор, принимающий режим работы (по умолчанию — ViewReadOnly)
-    explicit MainWindow(FormMode mode = ViewReadOnly, QWidget *parent = nullptr);
+
+    explicit MainWindow(FormMode mode = ViewReadOnly, const QString &dbType = "postgres", QWidget *parent = nullptr);
     ~MainWindow();
 
 signals:
     // Сигнал, который будет посылаться при нажатии кнопки Back
-    void backRequested();
+    void backRequested(const QString &dbType);
 
 private slots:
     void on_btnBack_clicked();
@@ -48,6 +49,8 @@ private slots:
     void on_btnDelete_clicked();
 
     void on_btnApply_clicked();
+
+    void handleConnectionError();
 
 private:
     //DEBUG
@@ -66,6 +69,8 @@ private:
     void showLoadingSpinner();
     void hideLoadingSpinner();
 
+    int serverPort() const;
+
     Ui::MainWindow *ui;
     NetworkClient *networkClient;
 
@@ -83,6 +88,8 @@ private:
 
     // Режим работы окна
     FormMode m_mode;
+
+    QString m_dbType;
 };
 
 #endif // MAINWINDOW_H

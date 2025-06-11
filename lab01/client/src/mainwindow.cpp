@@ -18,29 +18,29 @@
 #include <QToolButton>
 #include <QTextEdit>
 #include <QDialogButtonBox>
+#include <QMetaObject>
 #include "record.h"
 #include "RecordEditDialog.h"
 #include "RecordViewDialog.h"
 
 #define SERVER_IP "localhost"
-#define SERVER_PORT 8080
 
-// Обновлённый конструктор с параметром режима работы
-MainWindow::MainWindow(FormMode mode, QWidget *parent) :
+MainWindow::MainWindow(FormMode mode, const QString &dbType, QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    m_mode(mode)
+    m_mode(mode),
+    m_dbType(dbType)  // например, "postgres" или "berkleydb"
 {
     ui->setupUi(this);
 
     loadingLabel = new QLabel(this);
     loadingLabel->setAlignment(Qt::AlignCenter);
-    loadingLabel->setStyleSheet("background: transparent;"); // Прозрачный фон
+    loadingLabel->setStyleSheet("background: transparent;");
     loadingLabel->setGeometry(width() / 2 - 50, height() / 2 - 50, 100, 100);
 
-    loadingAnimation = new QMovie(":/icons/loading.gif"); // Укажите путь к .gif-анимации
+    loadingAnimation = new QMovie(":/icons/loading.gif");
     loadingLabel->setMovie(loadingAnimation);
-    loadingLabel->hide(); // Прячем, пока не требуется
+    loadingLabel->hide();
 
     // Формируем заголовок окна в зависимости от режима
     QString title = "employee - ";
@@ -55,30 +55,37 @@ MainWindow::MainWindow(FormMode mode, QWidget *parent) :
     // Создаем экземпляр NetworkClient
     networkClient = new NetworkClient(this);
 
+    // Записываем выбранный тип базы в JSON как дополнительное поле
+    // (Это будет сделано при формировании запроса ниже.)
+
     // Сначала заполним lookup-таблицу перевозчиков
     populateCarrierLookup();
 
-    // После этого запрашиваем данные таблицы employee и заполняем таблицу
+    // Запрос данных таблицы employee
     requestEmployeeTable();
-    // Настраиваем таблицу в зависимости от режима работы
+
+    // Настройка таблицы в зависимости от режима работы
     if (m_mode == ViewEdit) {
         ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
         ui->listTable->setSelectionMode(QAbstractItemView::SingleSelection);
         ui->listTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    } else if (m_mode == ViewReadOnly) {
+    }
+    else if (m_mode == ViewReadOnly) {
         ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
         ui->listTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    } else if (m_mode == Selection) {
+    }
+    else if (m_mode == Selection) {
         ui->listTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
         ui->listTable->setSelectionMode(QAbstractItemView::SingleSelection);
         ui->listTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     }
-    // Устанавливаем для всех столбцов, кроме последнего, режим подгонки под содержимое,
-    // а для последнего столбца режим растягивания.
-    for (int i = 0; i < ui->listTable->columnCount() - 1; ++i) {
-        ui->listTable->horizontalHeader()->setSectionResizeMode(i, QHeaderView::ResizeToContents);
+
+    int colCount = ui->listTable->columnCount();
+    if (colCount > 0) {
+        for (int i = 0; i < colCount - 1; ++i)
+            ui->listTable->horizontalHeader()->setSectionResizeMode(i, QHeaderView::ResizeToContents);
+        ui->listTable->horizontalHeader()->setSectionResizeMode(colCount - 1, QHeaderView::Stretch);
     }
-    ui->listTable->horizontalHeader()->setSectionResizeMode(ui->listTable->columnCount() - 1, QHeaderView::Stretch);
 
     updateButtonStates();
 }
@@ -124,23 +131,19 @@ void MainWindow::updateButtonStates()
 
 void MainWindow::populateCarrierLookup()
 {
-    // Формируем JSON-запрос для получения справочной таблицы перевозчиков
     QJsonObject requestObj;
-    requestObj["request_id"] = 2;  // Уникальный идентификатор запроса
+    requestObj["request_id"] = 2;
     requestObj["action"] = "get_lookup";
-    requestObj["table"] = "carriers";  // Название таблицы справки
+    requestObj["table"] = "carriers";
 
-    // Отправляем запрос через наш сетевой клиент
-    QJsonObject responseObj = networkClient->sendRequest(requestObj, SERVER_IP, SERVER_PORT);
+    // Используем выбранный порт
+    QJsonObject responseObj = networkClient->sendRequest(requestObj, SERVER_IP, serverPort());
 
-    // Проверяем, получили ли мы валидный ответ и статус "ok"
     if (responseObj.isEmpty() || responseObj.value("status").toString() != "ok") {
-        QMessageBox::warning(this, "Ошибка", "Не удалось получить lookup-таблицу для перевозчиков.");
+        //QMessageBox::warning(this, "Ошибка", "Не удалось получить lookup-таблицу для перевозчиков.");
         return;
     }
 
-    // Ожидается, что сервер вернёт JSON с массивом данных в поле "data"
-    // Каждая запись должна содержать поля "carrier_id" и "carrier_name"
     QJsonArray dataArray = responseObj.value("data").toArray();
     m_carrierLookup.clear();
 
@@ -148,35 +151,37 @@ void MainWindow::populateCarrierLookup()
         QJsonObject rowObj = value.toObject();
         QString id = rowObj.value("carrier_id").toString();
         QString name = rowObj.value("carrier_name").toString();
-        if (!id.isEmpty()) {
+        if (!id.isEmpty())
             m_carrierLookup.insert(id, name);
-        }
     }
 }
 
 void MainWindow::requestEmployeeTable()
 {
-    // Формируем JSON-запрос для получения данных таблицы employee
     QJsonObject requestObj;
     requestObj["request_id"] = 1;
     requestObj["action"] = "get_table_rows";
     requestObj["table"] = "employee";
     requestObj["limit"] = 1000;
     requestObj["offset"] = 0;
+    // (Если вы не передаёте тип базы в JSON, этот параметр можно не добавлять.)
+    // requestObj["database_type"] = m_dbType;
 
-    // Получаем ответ через наш сетевой клиент
-    QJsonObject responseObj = networkClient->sendRequest(requestObj, SERVER_IP, SERVER_PORT);
+    QJsonObject responseObj = networkClient->sendRequest(requestObj, SERVER_IP, serverPort());
     if (responseObj.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка", "Ошибка получения данных.");
+        QMessageBox::warning(this, "Ошибка", "Ошибка получения данных. Не удалось установить соединение с сервером.");
+        // Запланировать возврат с emit'ом сигнала после завершения обработки текущего события
+        QMetaObject::invokeMethod(this, "handleConnectionError", Qt::QueuedConnection);
         return;
     }
-
     if (responseObj.value("status").toString() != "ok") {
         QString errorMessage = responseObj.value("message").toString();
         QMessageBox::warning(this, "Ошибка", "Сервер вернул ошибку: " + errorMessage);
+        QMetaObject::invokeMethod(this, "handleConnectionError", Qt::QueuedConnection);
         return;
     }
 
+    // Если данные успешно получены, продолжаем заполнять таблицу.
     QJsonArray dataArray = responseObj.value("data").toArray();
     ui->listTable->clear();
 
@@ -187,13 +192,11 @@ void MainWindow::requestEmployeeTable()
         return;
     }
 
-    // Добавляем колонку id. Если не хотим её отображать, затем скрываем.
     QStringList headers;
     headers << "id" << "badge" << "lastname" << "firstname" << "experience" << "carrier_id";
 
     ui->listTable->setColumnCount(headers.size());
     ui->listTable->setHorizontalHeaderLabels(headers);
-    // Если не требуется отображать поле id, скрываем первую колонку:
     ui->listTable->setColumnHidden(0, true);
     ui->listTable->setRowCount(dataArray.size());
 
@@ -206,17 +209,13 @@ void MainWindow::requestEmployeeTable()
 
             if (key == "carrier_id") {
                 QString rawCarrierId = rowObj.value(key).toString();
-                // Получаем отображаемое имя из lookup‑таблицы
                 QString displayText = m_carrierLookup.contains(rawCarrierId) ? m_carrierLookup.value(rawCarrierId) : rawCarrierId;
                 item = new QTableWidgetItem(displayText);
-                // Сохраняем настоящий carrier_id в пользовательских данных
                 item->setData(Qt::UserRole, rawCarrierId);
             }
             else if (key == "id") {
-                // Извлекаем id из rowObj (если его нет – оставляем пустой)
                 QString cellText = rowObj.contains(key) ? rowObj.value(key).toString() : "";
                 item = new QTableWidgetItem(cellText);
-                // Сохраняем id в пользовательских данных (он понадобится для дальнейших операций)
                 item->setData(Qt::UserRole, cellText);
             }
             else {
@@ -233,7 +232,7 @@ void MainWindow::requestEmployeeTable()
 void MainWindow::on_btnBack_clicked()
 {
     // При нажатии на кнопку Back посылаем сигнал и закрываем окно
-    emit backRequested();
+    emit backRequested(m_dbType);
     close();
 }
 
@@ -463,18 +462,17 @@ void MainWindow::on_btnDelete_clicked()
 
 void MainWindow::on_btnApply_clicked()
 {
-    // Показываем спиннер (анимированный спиннер, реализованный ранее)
     showLoadingSpinner();
 
-    // Формируем JSON-запрос
     QJsonObject requestObj;
     requestObj["action"] = "apply_changes";
+    // Добавляем выбранный тип базы
+    requestObj["database_type"] = m_dbType;
 
     QJsonArray editedArray;
     for (const Record &rec : m_editedRecords) {
         QJsonObject obj;
-        // Полагаем, что поля Record: id, badge, lastName, firstName, experience, carrierId
-        obj["id"] = rec.id;      // Если id хранится как число, иначе приведите к int
+        obj["id"] = rec.id;
         obj["badge"] = rec.badge;
         obj["lastname"] = rec.lastName;
         obj["firstname"] = rec.firstName;
@@ -485,9 +483,8 @@ void MainWindow::on_btnApply_clicked()
     requestObj["edited"] = editedArray;
 
     QJsonArray deletedArray;
-    for (int recId : m_deletedRecordIDs) {
+    for (int recId : m_deletedRecordIDs)
         deletedArray.append(recId);
-    }
     requestObj["deleted"] = deletedArray;
 
     QJsonArray addedArray;
@@ -503,26 +500,20 @@ void MainWindow::on_btnApply_clicked()
     }
     requestObj["added"] = addedArray;
 
-    // Добавляем дополнительное поле (например, временную метку)
     requestObj["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
 
-    // Отправляем запрос на сервер через сетевой клиент
-    QJsonObject responseObj = networkClient->sendRequest(requestObj, SERVER_IP, SERVER_PORT);
+    // Отправляем запрос на сервер через NetworkClient с выбранным портом
+    QJsonObject responseObj = networkClient->sendRequest(requestObj, SERVER_IP, serverPort());
 
-    // Скрываем спиннер после получения ответа
     hideLoadingSpinner();
 
-    // Обрабатываем ответ сервера
     if (responseObj.value("status").toString() == "ok") {
-        // Очистка списков изменений
         m_editedRecords.clear();
         m_addedRecords.clear();
         m_deletedRecordIDs.clear();
         QMessageBox::information(this, "Изменения применены", "Все изменения успешно внесены в БД.");
     } else {
-        // Извлекаем подробное сообщение (если оно есть)
         QString errorDetails = responseObj.value("message").toString();
-        // Вызываем наш диалог с коротким сообщением и спойлером для деталей
         showErrorDialog("Ошибка", "Не удалось применить изменения на сервере.", errorDetails);
     }
 }
@@ -648,4 +639,19 @@ void MainWindow::showErrorDialog(const QString &title, const QString &shortMessa
     connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
 
     dialog.exec();
+}
+
+int MainWindow::serverPort() const {
+    if(m_dbType.toLower() == "postgres")
+        return 8080;
+    else if(m_dbType.toLower() == "berkleydb")
+        return 8081;
+    return 8080; // порт по умолчанию
+}
+
+void MainWindow::handleConnectionError()
+{
+    emit backRequested(m_dbType);   // передаём значение типа базы
+    if (!this->isHidden())
+        this->close();
 }

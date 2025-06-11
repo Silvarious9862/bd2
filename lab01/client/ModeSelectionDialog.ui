@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>223</width>
+    <width>234</width>
     <height>300</height>
    </rect>
   </property>
@@ -17,6 +17,19 @@
    <iconset theme="QIcon::ThemeIcon::DialogQuestion"/>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QToolButton" name="btnSwitchDb">
+     <property name="text">
+      <string>PostgreSQL</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="toolButtonStyle">
+      <enum>Qt::ToolButtonStyle::ToolButtonTextOnly</enum>
+     </property>
+    </widget>
+   </item>
    <item>
     <widget class="QRadioButton" name="radioEdit">
      <property name="text">

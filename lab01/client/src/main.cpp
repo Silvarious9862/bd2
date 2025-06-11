@@ -1,44 +1,43 @@
 #include <QApplication>
+#include <QString>
 #include "mainwindow.h"
 #include "ModeSelectionDialog.h"
-#include "formmode.h" // Если используется глобальное перечисление, но здесь мы используем внутреннее MainWindow::FormMode
+#include "formmode.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-
-    // Флаг, который будет устанавливаться, если пользователь нажал Back
     bool restartMainWindow = false;
-
+    QString previousDbType = "";
     do {
-        // Показываем диалог выбора режима
         ModeSelectionDialog modeDialog;
+
+        if (!previousDbType.isEmpty()) {
+            modeDialog.setInitialDbType(previousDbType);
+        }
+
         if (modeDialog.exec() != QDialog::Accepted) {
-            // Если пользователь отменил выбор, завершаем приложение
             break;
         }
 
-        // Создаем главное окно с выбранным режимом
-        MainWindow *w = new MainWindow(static_cast<MainWindow::FormMode>(modeDialog.selectedMode()));
-        // При соединении сигнала backRequested завершаем текущую event loop
-        QObject::connect(w, &MainWindow::backRequested, [&]() {
+        // Получаем выбранный режим и тип базы данных
+        MainWindow::FormMode mode = static_cast<MainWindow::FormMode>(modeDialog.selectedMode());
+        QString dbType = modeDialog.selectedDbType();
+
+        // Создаем главное окно, передавая оба параметра
+        MainWindow *w = new MainWindow(mode, dbType);
+        QObject::connect(w, &MainWindow::backRequested, [&](const QString &returnedDbType) {
             restartMainWindow = true;
-            app.quit();
+            previousDbType = returnedDbType;
         });
 
         w->show();
-
-        // Запускаем event loop до закрытия главного окна
         int ret = app.exec();
-
-        // Удаляем окно
         delete w;
 
-        // Если приложение завершилось не по нажатию "Back", выходим из цикла
         if (!restartMainWindow)
             break;
 
-        // Сбрасываем флаг перед следующим циклом
         restartMainWindow = false;
     } while (true);
 
