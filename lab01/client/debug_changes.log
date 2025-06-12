@@ -104,3 +104,54 @@ Edited Records:
 Added Records:
 Deleted Record IDs:
 ---------------------------------------
+DEBUG LOG: 2025-06-12T15:15:11
+Edited Records:
+Added Records:
+Deleted Record IDs:
+  2
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:15:35
+Edited Records:
+  ID: 4, badge: 42959, lastName: RENAMED_LN, firstName: RENAMED_FN, experience: 17, carrier_id: 23, carrier_name: Kassulke, OHara and Renner
+Added Records:
+Deleted Record IDs:
+  2
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:16:13
+Edited Records:
+  ID: 4, badge: 42959, lastName: RENAMED_LN, firstName: RENAMED_FN, experience: 17, carrier_id: 23, carrier_name: Kassulke, OHara and Renner
+Added Records:
+  ID: 307, badge: 65665, lastName: Dough, firstName: Zella, experience: 3, carrier_id: 3, carrier_name: King Inc
+Deleted Record IDs:
+  2
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:25:47
+Edited Records:
+Added Records:
+Deleted Record IDs:
+  1
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:25:59
+Edited Records:
+  ID: 2, badge: 17019, lastName: RENAMED, firstName: Sadye, experience: 18, carrier_id: 11, carrier_name: Schaden Group
+Added Records:
+Deleted Record IDs:
+  1
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:26:09
+Edited Records:
+  ID: 2, badge: 17019, lastName: RENAMED, firstName: Sadye, experience: 18, carrier_id: 11, carrier_name: Schaden Group
+  ID: 8, badge: 94828, lastName: Dooley, firstName: RENAMED, experience: 18, carrier_id: 22, carrier_name: Pouros Group
+Added Records:
+Deleted Record IDs:
+  1
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:26:39
+Edited Records:
+  ID: 2, badge: 17019, lastName: RENAMED, firstName: Sadye, experience: 18, carrier_id: 11, carrier_name: Schaden Group
+  ID: 8, badge: 94828, lastName: Dooley, firstName: RENAMED, experience: 18, carrier_id: 22, carrier_name: Pouros Group
+Added Records:
+  ID: 308, badge: 11122, lastName: ADDED, firstName: ADDED, experience: 4, carrier_id: 3, carrier_name: King Inc
+Deleted Record IDs:
+  1
+---------------------------------------

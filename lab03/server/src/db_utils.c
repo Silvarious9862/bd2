@@ -89,17 +89,15 @@ char* get_tables_list() {
     return json_str;  // Вызывающему необходимо free(json_str)
 }
 
+/* Функция для извлечения значения поля из data-строки */
 static char* extract_field_value(const char *data_str, const char *field_name) {
-    // Ищем подстроку вида "field_name="
     size_t field_len = strlen(field_name);
     char search_str[128];
     snprintf(search_str, sizeof(search_str), "%s=", field_name);
     char *found = strstr(data_str, search_str);
     if (!found)
         return NULL;
-    found += field_len + 1; // переход к значению
-
-    // Копируем значение до символа | или конца строки
+    found += strlen(search_str); // переход к значению
     char *end = strchr(found, '|');
     size_t value_len = end ? (size_t)(end - found) : strlen(found);
     char *value = malloc(value_len + 1);
@@ -110,41 +108,60 @@ static char* extract_field_value(const char *data_str, const char *field_name) {
     return value;
 }
 
+/* Функция для сравнения двух JSON объектов по полю "carrier_id" (из data, например, "10") */
+static int compare_json_objects(const void *a, const void *b) {
+    const json_t *objA = *(const json_t **)a;
+    const json_t *objB = *(const json_t **)b;
+
+    const char* idA_str = json_string_value(json_object_get(objA, "carrier_id"));
+    const char* idB_str = json_string_value(json_object_get(objB, "carrier_id"));
+
+    long long idA = idA_str ? strtoll(idA_str, NULL, 10) : 0;
+    long long idB = idB_str ? strtoll(idB_str, NULL, 10) : 0;
+
+    if (idA < idB)
+        return -1;
+    else if (idA > idB)
+        return 1;
+    else
+        return 0;
+}
+
 char* get_lookup_table(const char* table) {
     int ret;
     DB_ENV *env = NULL;
     DB *dbp = NULL;
     DBC *cursorp = NULL;
     DBT key, data;
-    
-    // Создаем и открываем окружение BerkeleyDB
+
+    // Открываем окружение
     if ((ret = db_env_create(&env, 0)) != 0) {
         fprintf(stderr, "Ошибка создания DB_ENV: %s\n", db_strerror(ret));
         return NULL;
     }
-    if ((ret = env->open(env, "/home/silvarious/bd2/lab02/db_env", DB_CREATE | DB_INIT_MPOOL | DB_INIT_TXN, 0)) != 0) {
+    if ((ret = env->open(env, "/home/silvarious/bd2/lab02/db_env",
+                         DB_CREATE | DB_INIT_MPOOL | DB_INIT_TXN, 0)) != 0) {
         fprintf(stderr, "Ошибка открытия окружения BerkeleyDB: %s\n", db_strerror(ret));
         env->close(env, 0);
         return NULL;
     }
 
-
-    // Открываем базу данных lookup (например, lookup.db)
+    // Открываем основную базу данных transfer_db.db, а не lookup.db
     if ((ret = db_create(&dbp, env, 0)) != 0) {
         fprintf(stderr, "Ошибка создания объекта DB: %s\n", db_strerror(ret));
         env->close(env, 0);
         return NULL;
     }
-    if ((ret = dbp->open(dbp, NULL, "lookup.db", NULL, DB_BTREE, DB_CREATE, 0)) != 0) {
-        fprintf(stderr, "Ошибка открытия базы lookup: %s\n", db_strerror(ret));
+    if ((ret = dbp->open(dbp, NULL, "transfer_db.db", NULL, DB_BTREE, DB_CREATE, 0)) != 0) {
+        fprintf(stderr, "Ошибка открытия базы данных transfer_db.db: %s\n", db_strerror(ret));
         dbp->close(dbp, 0);
         env->close(env, 0);
         return NULL;
     }
 
-    // Формируем префикс для выборки: "lookup:<table>:"
+    // Формируем префикс для выборки. Теперь ищем ключи вида "carriers:" (если table ="carriers")
     char prefix[256];
-    snprintf(prefix, sizeof(prefix), "lookup:%s:", table);
+    snprintf(prefix, sizeof(prefix), "%s:", table);
     size_t prefix_len = strlen(prefix);
 
     if ((ret = dbp->cursor(dbp, NULL, &cursorp, 0)) != 0) {
@@ -154,7 +171,7 @@ char* get_lookup_table(const char* table) {
         return NULL;
     }
 
-    json_t *json_arr = json_array();
+    json_t *unsorted_arr = json_array();
     memset(&key, 0, sizeof(DBT));
     memset(&data, 0, sizeof(DBT));
     key.flags = DB_DBT_MALLOC;
@@ -166,30 +183,33 @@ char* get_lookup_table(const char* table) {
 
     ret = cursorp->get(cursorp, &key, &data, DB_SET_RANGE);
     while (ret == 0) {
-        // Если ключ не начинается с нужного префикса, прекращаем итерацию
+        // Если ключ не начинается с нужного префикса, завершаем итерацию
         if (key.size < prefix_len || strncmp((char *)key.data, prefix, prefix_len) != 0)
             break;
 
-        // Ключ имеет вид "lookup:<table>:<id>"
-        char *id = (char *)key.data + prefix_len;
-
-        // В data.data ожидается строка вида "id=...|company_name=...|..."
+        // В data.data ожидается строка вида:
+        // "id=10|company_name=Hammes Group|inn=26550868|..."
         char *data_str = (char *)data.data;
+        char *data_id = extract_field_value(data_str, "id");
         char *company_name = extract_field_value(data_str, "company_name");
 
         json_t *json_obj = json_object();
-        json_object_set_new(json_obj, "carrier_id", json_string(id));
+        if (data_id) {
+            json_object_set_new(json_obj, "carrier_id", json_string(data_id));
+            free(data_id);
+        } else {
+            json_object_set_new(json_obj, "carrier_id", json_string("0"));
+        }
         if (company_name) {
             json_object_set_new(json_obj, "carrier_name", json_string(company_name));
             free(company_name);
         } else {
             json_object_set_new(json_obj, "carrier_name", json_null());
         }
-        json_array_append_new(json_arr, json_obj);
+        json_array_append_new(unsorted_arr, json_obj);
 
         free(key.data);
         free(data.data);
-
         ret = cursorp->get(cursorp, &key, &data, DB_NEXT);
     }
 
@@ -197,7 +217,26 @@ char* get_lookup_table(const char* table) {
     dbp->close(dbp, 0);
     env->close(env, 0);
 
-    char *json_str = json_dumps(json_arr, JSON_COMPACT);
-    json_decref(json_arr);
-    return json_str;  // Вызывающему необходимо free(json_str)
+    // Если нужно отсортировать результаты по значению field "carrier_id"
+    size_t arr_size = json_array_size(unsorted_arr);
+    json_t **obj_array = malloc(arr_size * sizeof(json_t *));
+    if (!obj_array) {
+        json_decref(unsorted_arr);
+        return NULL;
+    }
+    for (size_t i = 0; i < arr_size; i++) {
+        obj_array[i] = json_array_get(unsorted_arr, i);
+    }
+    qsort(obj_array, arr_size, sizeof(json_t *), compare_json_objects);
+
+    json_t *sorted_arr = json_array();
+    for (size_t i = 0; i < arr_size; i++) {
+        json_array_append(sorted_arr, obj_array[i]);
+    }
+    free(obj_array);
+
+    char *json_str = json_dumps(sorted_arr, JSON_COMPACT);
+    json_decref(sorted_arr);
+    json_decref(unsorted_arr);
+    return json_str;  // Вызывающему нужно освобождать json_str через free()
 }
