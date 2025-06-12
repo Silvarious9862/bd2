@@ -7,7 +7,7 @@ INC_DIR := ./include
 OUT_DIR := ./out/$(BUILD)
 
 # Имя бинарного файла для нашего приложения
-TARGET := $(OUT_DIR)/server
+TARGET := $(OUT_DIR)/server_berkeley
 
 # Исходные файлы – включаем все .c файлы в каталоге src
 SRCS := $(wildcard $(SRC_DIR)/*.c)
@@ -45,3 +45,4 @@ release:
 
 clean:
 	rm -rf ./out ./db_env
+	rm *.log

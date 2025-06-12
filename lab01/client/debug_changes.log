@@ -155,3 +155,46 @@ Added Records:
 Deleted Record IDs:
   1
 ---------------------------------------
+DEBUG LOG: 2025-06-12T15:55:48
+Edited Records:
+  ID: 3, badge: 35485, lastName: RENAMED, firstName: Delpha, experience: 5, carrier_id: 16, carrier_name: Kassulke - Fahey
+Added Records:
+Deleted Record IDs:
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:55:57
+Edited Records:
+  ID: 3, badge: 35485, lastName: RENAMED, firstName: Delpha, experience: 5, carrier_id: 16, carrier_name: Kassulke - Fahey
+  ID: 5, badge: 69148, lastName: Witting, firstName: RENAMED, experience: 19, carrier_id: 19, carrier_name: Bartoletti - Stamm
+Added Records:
+Deleted Record IDs:
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:56:03
+Edited Records:
+  ID: 3, badge: 35485, lastName: RENAMED, firstName: Delpha, experience: 5, carrier_id: 16, carrier_name: Kassulke - Fahey
+  ID: 5, badge: 69148, lastName: Witting, firstName: RENAMED, experience: 19, carrier_id: 19, carrier_name: Bartoletti - Stamm
+Added Records:
+Deleted Record IDs:
+  4
+---------------------------------------
+DEBUG LOG: 2025-06-12T15:56:34
+Edited Records:
+  ID: 3, badge: 35485, lastName: RENAMED, firstName: Delpha, experience: 5, carrier_id: 16, carrier_name: Kassulke - Fahey
+  ID: 5, badge: 69148, lastName: Witting, firstName: RENAMED, experience: 19, carrier_id: 19, carrier_name: Bartoletti - Stamm
+Added Records:
+  ID: 307, badge: 11225, lastName: ADDED, firstName: ADDED, experience: 43, carrier_id: 15, carrier_name: Gorczany Group
+Deleted Record IDs:
+  4
+---------------------------------------
+DEBUG LOG: 2025-06-12T16:01:48
+Edited Records:
+Added Records:
+  ID: 308, badge: ADD2, lastName: ADD2, firstName: ADD2, experience: ADD2, carrier_id: 14, carrier_name: Davis - Kuhn
+Deleted Record IDs:
+---------------------------------------
+DEBUG LOG: 2025-06-12T16:02:09
+Edited Records:
+Added Records:
+  ID: 308, badge: ADD2, lastName: ADD2, firstName: ADD2, experience: ADD2, carrier_id: 14, carrier_name: Davis - Kuhn
+  ID: 309, badge: ADD3, lastName: ADD3, firstName: ADD3, experience: ADD3, carrier_id: 1, carrier_name: Orn Inc
+Deleted Record IDs:
+---------------------------------------

@@ -83,23 +83,21 @@ int apply_changes_transaction(json_t *edited_array,
             if (!json_is_object(record))
                 continue;
             
-            const char *id_str       = json_string_value(json_object_get(record, "id"));
-            const char *badge        = json_string_value(json_object_get(record, "badge"));
-            const char *lastname     = json_string_value(json_object_get(record, "lastname"));
-            const char *firstname    = json_string_value(json_object_get(record, "firstname"));
-            const char *experience   = json_string_value(json_object_get(record, "experience"));
-            const char *carrier_id   = json_string_value(json_object_get(record, "carrier_id"));
-
-            int id_val = id_str ? atoi(id_str) : 0;
-            int key_index = id_val - 1; // ключ должен ссылаться на индекс, считающий с нуля
+            /* Значение id теперь используется напрямую для построения key */
+            const char *id         = json_string_value(json_object_get(record, "id"));
+            const char *badge      = json_string_value(json_object_get(record, "badge"));
+            const char *lastname   = json_string_value(json_object_get(record, "lastname"));
+            const char *firstname  = json_string_value(json_object_get(record, "firstname"));
+            const char *experience = json_string_value(json_object_get(record, "experience"));
+            const char *carrier_id = json_string_value(json_object_get(record, "carrier_id"));
 
             char key_str[256];
-            snprintf(key_str, sizeof(key_str), "%s:%d", TARGET_TABLE, key_index);
+            snprintf(key_str, sizeof(key_str), "%s:%s", TARGET_TABLE, id ? id : "");
 
+            /* Формируем строку данных без поля id */
             char value_str[1024];
             snprintf(value_str, sizeof(value_str),
-                     "id=%s|badge=%s|lastname=%s|firstname=%s|experience=%s|carrier_id=%s",
-                     id_str ? id_str : "",
+                     "badge=%s|lastname=%s|firstname=%s|experience=%s|carrier_id=%s",
                      badge ? badge : "",
                      lastname ? lastname : "",
                      firstname ? firstname : "",
@@ -115,7 +113,6 @@ int apply_changes_transaction(json_t *edited_array,
             ret = dbp->put(dbp, NULL, &db_key, &db_data, 0);
             if (ret != 0) {
                 *err_msg = strdup(db_strerror(ret));
-                /* Здесь можно выполнить откат всей операции, если требуется */
                 dbp->close(dbp, 0);
                 env->close(env, 0);
                 return -1;
@@ -131,23 +128,19 @@ int apply_changes_transaction(json_t *edited_array,
             if (!json_is_object(record))
                 continue;
 
-            const char *id_str       = json_string_value(json_object_get(record, "id"));
-            const char *badge        = json_string_value(json_object_get(record, "badge"));
-            const char *lastname     = json_string_value(json_object_get(record, "lastname"));
-            const char *firstname    = json_string_value(json_object_get(record, "firstname"));
-            const char *experience   = json_string_value(json_object_get(record, "experience"));
-            const char *carrier_id   = json_string_value(json_object_get(record, "carrier_id"));
-
-            int id_val = id_str ? atoi(id_str) : 0;
-            int key_index = id_val - 1; // ключ = data id - 1
+            const char *id         = json_string_value(json_object_get(record, "id"));
+            const char *badge      = json_string_value(json_object_get(record, "badge"));
+            const char *lastname   = json_string_value(json_object_get(record, "lastname"));
+            const char *firstname  = json_string_value(json_object_get(record, "firstname"));
+            const char *experience = json_string_value(json_object_get(record, "experience"));
+            const char *carrier_id = json_string_value(json_object_get(record, "carrier_id"));
 
             char key_str[256];
-            snprintf(key_str, sizeof(key_str), "%s:%d", TARGET_TABLE, key_index);
+            snprintf(key_str, sizeof(key_str), "%s:%s", TARGET_TABLE, id ? id : "");
 
             char value_str[1024];
             snprintf(value_str, sizeof(value_str),
-                     "id=%s|badge=%s|lastname=%s|firstname=%s|experience=%s|carrier_id=%s",
-                     id_str ? id_str : "",
+                     "badge=%s|lastname=%s|firstname=%s|experience=%s|carrier_id=%s",
                      badge ? badge : "",
                      lastname ? lastname : "",
                      firstname ? firstname : "",
@@ -175,20 +168,19 @@ int apply_changes_transaction(json_t *edited_array,
         int num_deleted = (int)json_array_size(deleted_array);
         for (int i = 0; i < num_deleted; i++) {
             json_t *id_item = json_array_get(deleted_array, i);
-            int id_val = 0;
-            char id_buf[32];
+            const char *id = NULL;
+            char id_buf[32] = {0};  // <-- Объявляем буфер здесь, в начале итерации
             if (json_is_integer(id_item)) {
-                id_val = (int)json_integer_value(id_item);
+                snprintf(id_buf, sizeof(id_buf), "%lld", json_integer_value(id_item));
+                id = id_buf;
             } else if (json_is_string(id_item)) {
-                id_val = atoi(json_string_value(id_item));
+                id = json_string_value(id_item);
             } else {
                 continue;
             }
-            int key_index = id_val - 1; // вычитаем 1 чтобы получить ключ
-            snprintf(id_buf, sizeof(id_buf), "%d", key_index);
 
             char key_str[256];
-            snprintf(key_str, sizeof(key_str), "%s:%s", TARGET_TABLE, id_buf);
+            snprintf(key_str, sizeof(key_str), "%s:%s", TARGET_TABLE, id ? id : "");
 
             DBT db_key = {0};
             db_key.data = key_str;

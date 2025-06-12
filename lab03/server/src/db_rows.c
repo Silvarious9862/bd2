@@ -90,8 +90,12 @@ char* get_table_rows(const char* table, int limit, int offset) {
         if (key.size < prefix_len || strncmp((char *)key.data, prefix, prefix_len) != 0)
             break;
 
+        // Извлекаем идентификатор из ключа: часть после префикса
+        char *key_str = (char *)key.data;
+        char *id_in_key = key_str + prefix_len; // например, "90"
+
         // data.data содержит строку вида:
-        // "id=90|car_model=Bentley|insurance=2024-07-13|maintenance=2024-12-01|vin=LRXLV450KPW773092|company_id=6"
+        // "car_model=Bentley|insurance=2024-07-13|maintenance=2024-12-01|vin=LRXLV450KPW773092|company_id=6"
         char *data_str = strndup((char *)data.data, data.size);
         if (!data_str) {
             fprintf(stderr, "Ошибка выделения памяти для данных\n");
@@ -99,11 +103,13 @@ char* get_table_rows(const char* table, int limit, int offset) {
         }
         json_t *json_obj = json_object();
 
-        // Разбиваем строку по разделителю "|"
+        // Добавляем id, извлеченное из ключа, как поле "id"
+        json_object_set_new(json_obj, "id", json_string(id_in_key));
+
+        // Парсим остаток data_str: разбиваем по разделителю "|" для формирования остальных пар
         char *saveptr;
         char *token = strtok_r(data_str, "|", &saveptr);
         while (token) {
-            // Разделяем каждую пару по символу '='
             char *equal = strchr(token, '=');
             if (equal) {
                 *equal = '\0';
@@ -115,7 +121,6 @@ char* get_table_rows(const char* table, int limit, int offset) {
         }
         free(data_str);
 
-        // Добавляем объект в массив
         json_array_append_new(unsorted_arr, json_obj);
 
         free(key.data);
