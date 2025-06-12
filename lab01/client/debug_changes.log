@@ -67,3 +67,40 @@ Added Records:
 Deleted Record IDs:
   305
 ---------------------------------------
+DEBUG LOG: 2025-06-11T17:13:16
+Edited Records:
+Added Records:
+Deleted Record IDs:
+  107
+---------------------------------------
+DEBUG LOG: 2025-06-11T17:29:21
+Edited Records:
+Added Records:
+Deleted Record IDs:
+  107
+---------------------------------------
+DEBUG LOG: 2025-06-11T20:57:36
+Edited Records:
+  ID: 6, badge: 28567, lastName: Gerhold, firstName: Fidel, experience: 12, carrier_id: 10, carrier_name: Hammes Group
+Added Records:
+Deleted Record IDs:
+---------------------------------------
+DEBUG LOG: 2025-06-11T20:57:48
+Edited Records:
+  ID: 6, badge: 28567, lastName: Gerhold, firstName: Fidel, experience: 12, carrier_id: 10, carrier_name: Hammes Group
+Added Records:
+Deleted Record IDs:
+  13
+---------------------------------------
+DEBUG LOG: 2025-06-12T14:42:44
+Edited Records:
+Added Records:
+Deleted Record IDs:
+  105
+---------------------------------------
+DEBUG LOG: 2025-06-12T14:48:34
+Edited Records:
+  ID: 2, badge: 17019, lastName: Stark, firstName: Sadye, experience: 15, carrier_id: , carrier_name: 
+Added Records:
+Deleted Record IDs:
+---------------------------------------
